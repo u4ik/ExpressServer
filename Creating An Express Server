@@ -1,0 +1,493 @@
+Creating an express server with User Token Authorization & Password Hashing
+Amit's 1337 Server Guide v1.1
+
+//CREATING THE SERVER******************************
+    -Create a Folder
+    -"npm init" on folder
+    -Then assign name
+    -in package.json -> change "main:" value to root file name(ex.)index.js -> app.js)
+
+    create a file called "index.js" -> can change the name in package.json-> "main:"
+
+    in index.js/app.js :
+    //Importing Express:
+    var express = require('express')
+    var app = express()
+
+    //Express being applied allows reqs to be in a json format
+    app.use(express.json())
+
+    //Default Port to Run the server
+    app.listen(3000, function() {
+        console.log('app is running on 3000')
+    })
+    //Runs server on the port 3000
+
+    Majority of the files used in the server will need a:
+        module.exports =
+//PACKAGES*****************************************
+
+        //.gitignore file- will ignore files/folders pushed to git
+
+        "node_modules/"
+        //.env file - will ignore internal secrets/files(ex.JWT_SECRET)
+        -Put this on line 1 in index.js/app.js. This will immediately run!
+            //Runs immediately, allows us to hide our data.
+            require('dotenv').config();
+        -Express
+        [Server]
+        npm install express
+        -Nodemon
+        [Allows server restarts]
+        npm install -g nodemon
+        -Dotenv
+        [Hides what we want when deployed]
+        npm install --save dotenv
+        -Bcrypt
+        [Hashing passwords]
+        npm install bcryptjs
+        -Sequelize
+        [Connects with SQL]
+        npm install --save sequelize^5
+        -Pg
+        [Required for postgres]
+        npm install --save pg pg-hstore 
+        -Jsonwebtoken
+        [Token authentication]
+        npm install jsonwebtoken
+
+        TO INSTALL ALL:
+
+        Add this to your package.json:
+
+                "dependencies": {
+                    "bcryptjs": "^2.4.3",
+                    "body-parser": "^1.19.0",
+                    "dotenv": "^8.2.0",
+                    "express": "^4.17.1",
+                    "jsonwebtoken": "^8.5.1",
+                    "nodemon": "^2.0.3",
+                    "pg": "^8.0.3",
+                    "sequelize": "^5.21.7"
+                }
+        Then run "npm install" on your server!
+//ROUTES*******************************************
+
+    If we want to link to a controller, we need to use a route.
+    --Import controller and then ->
+    app.get -> app.use('/endpoint', someController)
+
+    Routing - refers to determining how an app responds to the client
+    //An endpoint is a path and a specific HTTP request method (GET, POST, DELETE, PUT)
+    
+    examples: localhost:3000/
+            localhost:3000/api/test
+            localhost:3000/user/create
+
+            
+            router.%HTTP_REQ_HERE%.... will be used for requests/responses for endpoints within the controller
+
+            *At the end of your controller if it's a route, at the end put:*
+                module.exports = router;
+//CONTROLLERS**************************************
+
+    Controllers- 
+    -Receive incoming request depending on the route.
+    -Processing the incoming request: GET,POST,PUT,DELETE.
+    -Working with the model to ensure that the request data matches the types in the model and the database.
+    -Creating,updating,reading, or deleting objects in the database.
+
+    For any logic it's quicker to place in the controller sections from "app.js/index"
+
+    -Create a controllers folder, inside you can make a usercontroller/somethingcontroller.js
+    -In that file include :
+        //Importing express
+        var express = require('express')
+
+        var router = express.Router()
+
+        Now we can apply similar logic like we did from app.js/index.js
+            //"router.get" is used instead of "app.get" from the initial "app.js/index.js, since we're inside of a controller"        
+            router.get('/', function(req, res) {
+            res.send('Hey!! You!! Guysss Test Route Ayyyy!')
+            })
+
+            -Required to export the controller:
+            module.exports = router
+
+        -Importing controller into "app.js/index.js" example:
+            var test = require('./controllers/testcontroller')
+
+        -Then to use the controller in "app.js/index.js":
+            We use app.use instead. Along with the defined function.
+            ex.)
+                app.use('/user-controller', user);
+                app.use('/testing-controller, test)
+//SEQUELIZE****************************************
+    -pgAdmin - Sign in and create a database for the server. Useful to assign it as the same name as the server. 
+  
+    Preparing for Data:
+        -Sequelize: create a file in the root server directory called "db.js"
+            This file will allow us to communicate with our postGres database
+
+            -Install Sequelize:
+                root part of server folder in terminal:
+                    npm install --save sequelize
+                
+                -Inside db.js:
+                    //Calling from the sequelize package
+                    const Sequelize = require('sequelize');
+                    
+                    //Creates a new instance of sequelize:
+                    const sequelize = new Sequelize('%DATABASENAME_HERE%', 'postgres', '%PASSWORD_FOR_POSTGRES%',{
+                        host: 'localhost',
+                        dialect: 'postgres',
+                    })
+
+                    sequelize.authenticate().then(
+                        function success() { 
+                            console.log("Connected to the database.")
+                        },
+                        function error(err){
+                            console.log(err)
+                        }
+                    );
+
+                    module.exports = sequelize
+
+                -Importing it into app.js/index.js:
+                        -In app.js:
+                            var sequelize = require('./db')
+
+                            //Makes the connection
+                            //To drop the data base add:
+                            //{force:true}
+                            sequelize.sync()
+//MODELS/SIGN UP***********************************
+        -Create a models folder
+            -Inside create a '%NAME_OF_MODEL%'.js file
+                -Inside that file...:
+                    module.exports = function(sequelize, DataTypes) {
+                    return sequelize.define('user', {
+                        username: DataTypes.STRING,  
+                        passwordhash: DataTypes.STRING,
+                     })
+                    }
+
+                -Can add optional fields as well to each key:
+                        ex.
+                            username: {
+                                DataTypes.STRING,
+                                allowNull: false,
+                                unique: true
+                            },  
+                            passwordhash: DataTypes.STRING,
+        -To use the model we can import it into one of our controllers(ex.app.js/index.js))
+                Add to that controller:
+                    //Importing our sequelized database:
+                    *Import this into index.js and your controllers to use the model!!*
+                    var sequelize = require('../db') // Double check the ..db directory when adding to each
+
+                    //Importing the model database
+                    var UserModel = sequelize.import('../models/user')
+                                //OR
+                    //**To write that^ as a 1 liner. -> 
+                    - const UserModel = require('../db).import('../models/user')
+
+                    -Examples of using a model (UserModel):
+                        //POST REQUEST
+                    //Allows new user to be created
+                    router.post('/user', (req, res) => {
+                      var username = req.body.username;
+                      var password = req.body.passwordhash; //(ex."passwordhash": "somepassword" <- In postman's req.body)
+                                     UserModel.create({
+                                        username: username,
+                                        passwordhash: password
+                                    })
+                                    .then(res.json({
+                                        message: `User ${username} Created!`
+                                    })).catch(err => {
+                                        console.log('You messed up creating a user..??')
+                                        res.status(500).json(err)
+                                    })
+                    });
+                        //GET Request
+                    //Gets us all users in the database UserModel
+                    router.get('/user', (req, res) => {
+                    UserModel.findAll()
+                        .then(users => res.status(200).json(users))
+                        .catch(err => res.status(500).json(err));
+                        });
+//TESTING IN POSTMAN*******************************
+                Format for postman's JSON req.body to create that user:
+                {
+                "username": "testuser",
+                "passwordhash": "somepassword"
+                }	               
+//JWT TOKEN AUTHENTICATION*************************
+    -Importing jsonwebtoken into a controller
+        var jwt = require('jsonwebtoken')
+
+    -Using jwttoken
+        var token = jwt.sign({});
+        -Apply it to the variable that's used from the above ".then"
+        ex.)
+            UserModel.create({
+                    username: username,
+                    passwordhash: password
+                })
+                .then(user => {
+                    var token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: 60 * 60 * 24 * 14 });
+                    res.json({
+                        message: `User ${username} Created!`,
+                        user: user,
+                        sessionToken: token
+                    })
+                })
+                           
+    -Can add jwt token to our res.json from the server:
+                        res.json({
+                            message: `User ${username} Created!`,
+                            user: user,
+                            sessionToken: token
+                        })
+//JWT_SECRETS/DOTENV*******************************
+    -Create a .env file in the root of the server directory
+        -At the top of the index.js add require('dotenv').config();
+            This will make .env load before anything else!
+        -Inside that file:
+            JWT_SECRET = even-more-secret
+
+        This allows us to hide our jwt webtoken "token-secret".
+
+
+        -After adding our hidden information (JWT_SECRET) in our .env. 
+            We can replace the text in our token authentication.
+        -Change "token-secret" to process.env.JWT_SECRET
+//BCRYPT*******************************************
+    Allows us to encrypt the user's passwords.
+        **Make sure bcryptjs is installed**
+                //Importing bcrypt
+            -Add to the user controller:
+                var bcrypt = require('bcryptjs')
+
+            -Applying bcrypt:
+                When we are creating something with our user model:
+                    //Sign-up
+                        --Add to our router.post
+                    router.post('/user', (req, res) => {
+                        var username = req.body.username;
+                        var password = req.body.passwordhash;
+                        UserModel
+                            .create({
+                                username: username,
+                                passwordhash: bcrypt.hashSync(password, 10) //Applying bcrypt
+                            })
+                            //We are taking that var password and surrounding it with the bcrypt. The 10 is a randomizer.
+//SESSIONS/SIGN IN*********************************
+    //Database query/lookup
+    //Sign-in
+            BEFORE:
+             This allows us to search for a username to match with the request username.
+
+        router.post('/login', (req, res) => {
+            UserModel.findOne({ where: { username: req.body.username } }).then(
+                function(user) {
+                    if (user) {
+                        res.json(user);
+                    } else {
+                        res.status(500).send({ message: 'Invalid Login!' })
+                    }
+                }
+            )
+        });
+        *Test this in postman with the body:*
+            { 
+        		"username": "testuser",
+		        "passwordhash": "somepassword"
+                
+            }
+            AFTER:
+        -Now the final sign in adding bcrypt and jwtwebtoken:
+                router.post('/login', (req, res) => {
+                    UserModel.findOne({ where: { username: req.body.username } })
+                        .then(
+                            function(user) {
+                                if (user) {
+                                    bcrypt.compare(req.body.password, user.passwordhash, function(err, matches) {
+                                        if (matches) {                                                                    //7 days, this can also be written as a string. ex("7d")
+                                            var token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: 60 * 60 * 24 * 14 })
+                                            res.json({
+                                                user: user,
+                                                message: "Logged In!",
+                                                sessionToken: token
+                                            })
+                                        } else {
+                                            res.status(502).send({ message: "Invalid Password!" })
+                                        }
+                                    })
+                                } else {
+                                    res.status(500).send({ message: 'Invalid Username!' })
+                                }
+                            }
+                        )
+                });
+//CORS POLICY**************************************
+    Error
+    A set of rules that decide how different domains talk to each other.
+    By default they cannot.
+    Middleware will help solve this.
+//MIDDLEWARE***************************************
+     A function we create and then kick back out of the file it's defined in!
+        -Create a new folder "middleware" inside the server directory.
+    //HEADERS
+        Will allow the front end to talk to the backend.
+        
+        -Inside the middleware folder create a file called headers.js
+            Inside header.js:
+                    module.exports = function(req, res, next) {
+                        //Allowing all origins. Good for test apps, not for productional use. Allowing requests from ANYWHERE!.
+                    res.header('access-control-allow-origin', '*');
+                        //Most basic http requests that you can request. Allow them to exist and reach our server.
+                    res.header('access-control-allow-methods', 'GET, POST, PUT, DELETE');
+                        //All of these are different kinds of headers that can be sent.
+                    res.header('access-control-allow-headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+                                                            
+                    //Kicks the request off to the next part of the server
+                    next();
+                }
+        //HEADERS IMPORT
+                    -Now in app.js/index.js add after express import!(near the top!):
+                    app.use(require('./middleware/headers'));
+    //VALIDATE SESSION
+        //VALIDATE SESSION **METHOD 1**
+            Session verification by token.
+            -Inside the middleware folder create a file called validate-session.js
+                -Inside validate-session.js:
+                    //Importing jsonwebtoken:
+                    var jwt = require('jsonwebtoken');
+                    //Importing our database:
+                    var sequelize = require('../db');
+                    //Connecting to our user model:
+                    var User = sequelize.import('../models/user');
+
+
+                    module.exports = function(req, res, next){
+                        //The pre-request with OPTIONS
+                        //Checking the request
+                        if (req.method === 'OPTIONS') {
+                            next();
+                            //If NOT an options request we hit this else:
+                        } else{
+                            //Where we pull the token from auth header. Log it.
+                            var sessionToken = req.headers.authorization;
+                            console.log(sessionToken);
+
+                            //Main logic
+                            //If there's a session token, let's verify it. Else unauthorized response sent!
+                            sessionToken ? verifyToken() : res.status(403).send({auth:false, message: "No Token Provided!"})
+
+                            function verifyToken(){
+                                //Use the sessionToken we pulled from the request.
+                                //Will also give it our JWT_SECRET
+                            jwt.verify(sessionToken, process.env.JWT_SECRET, (err, decoded) => {
+                                //Callback checks to see if our token has been decoded. 
+                                //If it has we'll find that user. If not, we'll send not authorized.
+                                    decoded ? findUser(decoded) : res.status(401).send({error: "Not Authorized"})
+                            })
+                            };
+
+                            function findUser(decoded){
+                            //Finding a user in the database.
+                                User.findOne({where: {id:decoded.id}})
+                                //Pass it off.
+                                .then(user => {
+                                    //Append
+                                    req.user = user;
+                                    //Pass it off
+                                    next();
+                                })
+                            }
+                        }
+                    }
+        //VALIDATE SESSION **METHOD 2 Cleaner**
+                //Importing jwt
+                const jwt = require('jsonwebtoken');
+                //Importing our User Model
+                const User = require('../db').import('../models/user');
+
+
+                module.exports = async(req, res, next) => {
+                    const token = req.headers.authorization;
+
+                    try {
+                        const decoded = await jwt.verify(token, process.env.JWT_SECRET)
+                        const user = await User.findOne({ where: { id: decoded.id } })
+                        if (!user) throw new Error('no user found')
+                        req.user = user;
+                        next();
+                    } catch (err) {
+                        res.status(500).json({ error: err })
+                    }
+                };
+        //PROTECTING ROUTES/USING VALIDATESESSION
+            //Import into the contollers or index.js, anywhere you wish to block w/out a token.
+                var validateSession = (require('./middleware/validate-session'))
+            //Will block any routing that you have below it!
+
+                Now when you test in postman, you need to provide a session token within the headers!
+                    Go to headers in postman, and add:
+                     Authorization : *%SESSION_TOKEN_HERE%*
+            //Any endpoints you wish to apply this to can use this in the file:
+                        (GET exmaple:)
+                        //validateSession is handling the in-between request before it continues.
+                    router.get('/all', validateSession, (req, res) => {.......
+//COMMON REQUEST METHOD EXAMPLES*******************
+    GET//
+        GET ALL:
+            router.get('/all', (req, res) => {
+                %MODEL_NAME_HERE%.findAll()
+                    .then(response => res.status(200).json(response))
+                    .catch(err => res.status(500).json(err));
+            });
+        GET by id:
+           router.get('/:id', (req, res) => {
+            %MODEL_NAME_HERE%.findOne({ where: { name: req.params.id } })
+            .then(stuff => res.status(200).json(stuff))
+            .catch(err => res.status(500).json(err));
+            });
+    POST//
+        POST for data:
+            router.post('/post', (req, res) => {
+                if (!req.errors) { //Another way for error handling
+                    const variableObjToStorePostData = {
+                        name: req.body.name,
+                        age: req.body.age
+                    };
+                    %MODEL_NAME_HERE%.create(variableObjToStorePostData) //Using the obj from above, can directy input an obj here as well ({ name: 'Bob', age: 30})
+                        .then(newData => res.status(200).json(newData))
+                        .catch(err => res.json(err))
+                } else {
+                    res.status(500).json(req.errors);
+                }
+            });
+    DEL//
+        DEL by id:
+            router.delete('/:id', (req, res) => {
+                %MODEL_NAME_HERE%.destroy({ where: { id: req.params.id } })
+                .then(data => res.status(200).json(data))
+                .catch(err => res.status(500).json(err))
+            })
+    PUT//
+        PUT by id:
+            router.put('/:id', (req, res) => {
+                    %MODEL_NAME_HERE%.update(req.body, { where: { id: req.params.id } })
+                    .then(data => res.status(200).json(data))
+                    .catch(err => res.status(500).json(err));
+      
+                    res.status(500).json(req.errors);
+            });
+//CONNECTING A FRONT-END TO BACKEND****************
+    npm start 
+    on your front end client server folder..
+    Now from the front end client you can perform fetch requests to the server!
