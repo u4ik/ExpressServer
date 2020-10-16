@@ -5,9 +5,9 @@ Amit's 1337 Server Guide v1.1
     -Create a Folder
     -"npm init" on folder
     -Then assign name
-    -in package.json -> change "main:" value to root file name(ex.)index.js -> app.js)
+    -in package.json -> change "main:" value to root file name(ex.)index.js or app.js)
 
-    create a file called "index.js" -> can change the name in package.json-> "main:"
+    create a file called "index.js" or "app.js -> can change the name in package.json-> "main:"
 
     in index.js/app.js :
     //Importing Express:
